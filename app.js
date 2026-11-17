@@ -1,4 +1,3 @@
-
 const SUPABASE_URL="https://woftdumqolsjruiwtipy.supabase.co";
 const SUPABASE_ANON_KEY="sb_publishable_cS7yzZeAQSZ1wvYg838Z9Q_wM-YcHn1";
 const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
@@ -19,10 +18,31 @@ $("createForm").onsubmit=async e=>{e.preventDefault();let {error}=await db.from(
 $("questionForm").onsubmit=async e=>{e.preventDefault();let {error}=await db.from("questions").insert({test_id:$("questionTest").value,question_text:$("questionText").value,options:[$("a").value,$("b").value,$("c").value,$("d").value],correct_answer:"ABCD".indexOf($("correct").value),marks:Number($("marks").value)});if(error)message("questionMsg",error.message);else{message("questionMsg","Question added.",true);e.target.reset();}};
 async function publishTest(id,val){let {error}=await db.from("tests").update({is_published:val}).eq("id",id);if(error)alert(error.message);else loadAdmin();}
 async function removeTest(id){if(confirm("Delete this test and its questions?")){let {error}=await db.from("tests").delete().eq("id",id);if(error)alert(error.message);else loadAdmin();}}
-async function startTest(id){let {data:t,error}=await db.from("tests").select("*").eq("id",id).single();if(error)return alert(error.message);let {data:qs,error:qerr}=await db.from("questions").select("id,question_text,options,marks").eq("test_id",id).order("created_at");if(qerr)return alert(qerr.message);if(!qs?.length)return alert("No questions in this test.");activeTest=t;questions=qs;remaining=t.duration_minutes*60;$("examTitle").textContent=t.title;$("examQuestions").innerHTML=qs.map((q,i)=>`<article class="panel question"><h3>${i+1}. ${esc(q.question_text)} (${q.marks} marks)</h3>${q.options.map((o,j)=>`<label class="choice"><input type="radio" name="q${q.id}" value="${j}"> ${"ABCD"[j]}. ${esc(o)}</label>`).join("")}</article>`).join("");view("exam");timer();clearInterval(tick);tick=setInterval(()=>{remaining--;timer();if(remaining<=0)submitTest(true);},1000);}
+async function startTest(id){let {data:t,error}=await db.from("tests").select("*").eq("id",id).single();if(error)return alert(error.message);let {data:qs,error:qerr}=await db.from("questions").select("id,question_text,options,correct_answer,marks").eq("test_id",id).order("created_at");if(qerr)return alert(qerr.message);if(!qs?.length)return alert("No questions in this test.");activeTest=t;questions=qs;remaining=t.duration_minutes*60;$("examTitle").textContent=t.title;$("examQuestions").innerHTML=qs.map((q,i)=>`<article class="panel question"><h3>${i+1}. ${esc(q.question_text)} (${q.marks} marks)</h3>${q.options.map((o,j)=>`<label class="choice"><input type="radio" name="q${q.id}" value="${j}"> ${"ABCD"[j]}. ${esc(o)}</label>`).join("")}</article>`).join("");view("exam");timer();clearInterval(tick);tick=setInterval(()=>{remaining--;timer();if(remaining<=0)submitTest(true);},1000);}
 function timer(){$("timer").textContent=`${String(Math.floor(Math.max(remaining,0)/60)).padStart(2,"0")}:${String(Math.max(remaining,0)%60).padStart(2,"0")}`;}
 $("examForm").onsubmit=e=>{e.preventDefault();if(confirm("Submit this test?"))submitTest(false);};
-async function submitTest(auto){clearInterval(tick);let score=0,total=0,answers={};questions.forEach(q=>{total+=Number(q.marks);let c=document.querySelector(`input[name="q${q.id}"]:checked`);answers[q.id]=c?Number(c.value):null;if(c&&Number(c.value)===Number(q.correct_answer))score+=Number(q.marks);});let {error}=await db.from("results").insert({student_id:user.id,test_id:activeTest.id,score,total,answers});if(error)return alert(error.message);alert(`${auto?"Time is up. ":""}Your score: ${score}/${total}`);view("student");loadStudent();}
+async function submitTest(auto){
+ clearInterval(tick);
+ const submitButton=$("examForm").querySelector('button[type="submit"],button:not([type])');
+ if(submitButton)submitButton.disabled=true;
+ let score=0,total=0,correctCount=0,wrongCount=0,unansweredCount=0,answers={};
+ questions.forEach(q=>{
+  total+=Number(q.marks);
+  const selected=document.querySelector(`input[name="q${q.id}"]:checked`);
+  answers[q.id]=selected?Number(selected.value):null;
+  if(!selected){unansweredCount++;}
+  else if(Number(selected.value)===Number(q.correct_answer)){score+=Number(q.marks);correctCount++;}
+  else{wrongCount++;}
+ });
+ const percentage=total?((score/total)*100).toFixed(2):"0.00";
+ const {error}=await db.from("results").insert({student_id:user.id,test_id:activeTest.id,score,total,answers});
+ if(error){if(submitButton)submitButton.disabled=false;alert("Could not save your result: "+error.message);return;}
+ $("latestResult").hidden=false;
+ $("latestResult").innerHTML=`<span class="pill">${auto?"TIME COMPLETED":"TEST SUBMITTED"}</span><h2>Test Result: ${esc(activeTest.title)}</h2><h1>${score} / ${total}</h1><p><strong>${percentage}%</strong> score</p><p>Correct: ${correctCount} &nbsp; | &nbsp; Incorrect: ${wrongCount} &nbsp; | &nbsp; Unanswered: ${unansweredCount}</p>`;
+ view("student");
+ await loadStudent();
+ window.scrollTo({top:0,behavior:"smooth"});
+}
 $("templateBtn").onclick=()=>{let rows=[["Question","Option A","Option B","Option C","Option D","Correct Option","Marks"],["Sample question?","Answer A","Answer B","Answer C","Answer D","A",1]];let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),"Questions");XLSX.writeFile(wb,"question_upload_template.xlsx");};
 $("importBtn").onclick=async()=>{let file=$("excelFile").files[0],testId=$("excelTest").value;if(!file||!testId)return message("importMsg","Select a test and Excel file.");try{let wb=XLSX.read(await file.arrayBuffer(),{type:"array"}),rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:""});if(!rows.length)throw Error("No rows found.");let payload=rows.map((r,i)=>{let c=String(r["Correct Option"]).trim().toUpperCase();if(!r.Question||!r["Option A"]||!r["Option B"]||!r["Option C"]||!r["Option D"]||!"ABCD".includes(c)||c.length!==1)throw Error(`Check required columns and Correct Option in row ${i+2}.`);return{test_id:testId,question_text:String(r.Question),options:["Option A","Option B","Option C","Option D"].map(k=>String(r[k])),correct_answer:"ABCD".indexOf(c),marks:Math.max(1,Number(r.Marks)||1)};});let {error}=await db.from("questions").insert(payload);if(error)throw error;message("importMsg",`${payload.length} questions imported.`,true);$("excelFile").value="";}catch(e){message("importMsg",e.message);}};
 $("exportBtn").onclick=()=>{let f=$("resultFilter").value,rows=adminRows.filter(r=>f==="all"||r.test_id===f).map(r=>({"Student Email":r.profiles?.email||"","Test":r.tests?.title||"", "Score":r.score,"Maximum Marks":r.total,"Percentage":r.total?Math.round(r.score/r.total*10000)/100:0,"Submitted At":new Date(r.submitted_at).toLocaleString(),"Result ID":r.id}));if(!rows.length)return alert("No results to export.");let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),"Test Results");XLSX.writeFile(wb,"conduction_test_results.xlsx");};
