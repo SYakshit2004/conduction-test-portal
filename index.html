@@ -1,31 +1,102 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Conduction Test Portal</title><link rel="stylesheet" href="style.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Code-X Test Center </title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
+
 <body>
-<header><div class="brand">🧠 Conduction Test Portal</div><nav id="nav"><button class="ghost" id="logoutBtn" hidden>Logout</button></nav></header>
-<main>
-<section id="authView" class="auth-layout">
- <div class="hero"><span class="pill">ONLINE EXAM PLATFORM</span><h1>Test your knowledge.<br><em>Track your progress.</em></h1><p>A simple, secure portal for students and administrators.</p></div>
- <div class="panel auth-panel"><div class="tabs"><button class="tab active" data-mode="login">Login</button><button class="tab" data-mode="signup">Student Sign up</button></div>
- <form id="authForm"><label>Email address<input type="email" id="email" required placeholder="you@example.com"></label><label>Password<input type="password" id="password" minlength="6" required placeholder="At least 6 characters"></label><button class="primary full" id="authSubmit">Login</button><p class="hint" id="authHint">Admin accounts are assigned by the portal owner.</p></form>
- <p id="authMessage" class="message"></p></div>
-</section>
-<section id="studentView" hidden>
- <div class="welcome"><div><span class="pill">STUDENT DASHBOARD</span><h1>Welcome back!</h1><p>Choose an available test and do your best.</p></div><div class="stat"><strong id="studentResultCount">0</strong><span>Results</span></div></div>
- <h2>Available tests</h2><div id="testList" class="cards"></div><h2>Your results</h2><div id="studentResults" class="panel"></div>
-</section>
-<section id="adminView" hidden>
- <div class="welcome"><div><span class="pill">ADMIN DASHBOARD</span><h1>Test management</h1><p>Create tests, add questions and review student results.</p></div></div>
- <div class="admin-grid"><div class="panel"><h2>Create a test</h2><form id="createTestForm"><label>Test title<input id="testTitle" required maxlength="120" placeholder="e.g. Python Fundamentals"></label><label>Description<textarea id="testDescription" rows="3" placeholder="Brief instructions"></textarea></label><label>Duration (minutes)<input id="testDuration" type="number" min="1" max="180" value="30" required></label><button class="primary">Create test</button></form><p id="createTestMessage" class="message"></p></div>
- <div class="panel"><h2>Add a question</h2><form id="questionForm"><label>Select test<select id="questionTest" required></select></label><label>Question<textarea id="questionText" rows="3" required></textarea></label><label>Option A<input id="optionA" required></label><label>Option B<input id="optionB" required></label><label>Option C<input id="optionC" required></label><label>Option D<input id="optionD" required></label><label>Correct option<select id="correctAnswer"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select></label><label>Marks<input id="questionMarks" type="number" min="1" value="1" required></label><button class="primary">Add question</button></form><p id="questionMessage" class="message"></p></div></div>
- <h2>Your tests</h2><div id="adminTests" class="cards"></div><h2>All student results</h2><div id="adminResults" class="panel"></div>
-</section>
-<section id="examView" hidden><div class="exam-head panel"><div><span class="pill">TEST IN PROGRESS</span><h1 id="examTitle"></h1><p id="examProgress"></p></div><div class="timer" id="timer">00:00</div></div><form id="examForm"><div id="examQuestions"></div><button class="primary submit-exam">Submit test</button></form><p id="examMessage" class="message"></p></section>
-</main><footer>Conduction Test Portal · Learn, practice, improve</footer>
-<div id="toast" role="status"></div>
-<script src="app.js"></script>
-</body></html>
+    <header><b>SJDC Code-X Test Center</b><button id="logout" hidden>Logout</button></header>
+    <main>
+        <section id="auth" class="auth">
+            <div><span class="pill">ONLINE EXAM PLATFORM</span>
+                <h1>Test your knowledge.<br><em>Track your progress.</em></h1>
+                <p>Student and administrator examination portal.</p>
+            </div>
+            <div class="panel">
+                <div class="tabs"><button id="loginTab" class="active">Login</button><button id="signupTab">Student Sign
+                        up</button></div>
+                <form id="authForm"><label>Email<input id="email" type="email" required></label><label>Password<input
+                            id="password" type="password" minlength="6" required></label><button class="primary"
+                        id="authSubmit">Login</button></form>
+                <p id="authMsg" class="msg"></p>
+            </div>
+        </section>
+        <section id="student" hidden><span class="pill">STUDENT DASHBOARD</span>
+            <h1>Available tests</h1>
+            <div id="tests" class="cards"></div>
+            <h2>Your results</h2>
+            <div id="studentResults" class="panel"></div>
+        </section>
+        <section id="admin" hidden><span class="pill">ADMIN DASHBOARD</span>
+            <h1>Test management</h1>
+            <div class="cols">
+                <div class="panel">
+                    <h2>Create a test</h2>
+                    <form id="createForm"><label>Test title<input id="testTitle"
+                                required></label><label>Description<textarea
+                                id="testDescription"></textarea></label><label>Duration (minutes)<input id="duration"
+                                type="number" min="1" max="180" value="30"></label><button class="primary">Create
+                            test</button></form>
+                    <p id="createMsg" class="msg"></p>
+                </div>
+                <div class="panel">
+                    <h2>Add one question</h2>
+                    <form id="questionForm"><label>Test<select
+                                id="questionTest"></select></label><label>Question<textarea id="questionText"
+                                required></textarea></label><label>Option A<input id="a" required></label><label>Option
+                            B<input id="b" required></label><label>Option C<input id="c" required></label><label>Option
+                            D<input id="d" required></label><label>Correct option<select id="correct">
+                                <option>A</option>
+                                <option>B</option>
+                                <option>C</option>
+                                <option>D</option>
+                            </select></label><label>Marks<input id="marks" type="number" min="1"
+                                value="1"></label><button class="primary">Add question</button></form>
+                    <p id="questionMsg" class="msg"></p>
+                </div>
+            </div>
+            <h2>Excel tools</h2>
+            <div class="cols">
+                <div class="panel">
+                    <h3>Import questions from Excel</h3>
+                    <p>Download the template, fill it, select a test and upload.</p><button id="templateBtn">Download
+                        Excel template</button><label>Select test<select id="excelTest"></select></label><label>Excel
+                        file<input type="file" id="excelFile" accept=".xlsx,.xls,.csv"></label><button class="primary"
+                        id="importBtn">Import questions</button>
+                    <p id="importMsg" class="msg"></p>
+                </div>
+                <div class="panel">
+                    <h3>Export test results</h3>
+                    <p>Download all results or filter by a test.</p><label>Test filter<select id="resultFilter">
+                            <option value="all">All tests</option>
+                        </select></label><button class="primary" id="exportBtn">Download results Excel</button>
+                </div>
+            </div>
+            <h2>Your tests</h2>
+            <div id="adminTests" class="cards"></div>
+            <h2>All student results</h2>
+            <p>Edit score to manually correct a student's marks.</p>
+            <div id="adminResults" class="panel"></div>
+        </section>
+        <section id="exam" hidden>
+            <div class="panel examhead">
+                <div><span class="pill">TEST IN PROGRESS</span>
+                    <h1 id="examTitle"></h1>
+                </div><strong id="timer">00:00</strong>
+            </div>
+            <form id="examForm">
+                <div id="examQuestions"></div><button class="primary">Submit test</button>
+            </form>
+        </section>
+    </main>
+    <footer>Conduction Test Portal · Learn, practice, improve</footer>
+    <script src="app.js"></script>
+</body>
+
+</html>
