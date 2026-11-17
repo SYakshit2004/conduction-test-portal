@@ -1,38 +1,23 @@
-# Conduction Test Portal (HTML, CSS, JavaScript + Supabase)
+# Conduction Test Portal
 
-A responsive online test portal with student registration/login, administrator login, test creation, multiple-choice questions, timer, automatic score, and result dashboards. Uses Supabase free tier for authentication and PostgreSQL database. Static files deploy to GitHub Pages or Netlify.
+Includes student signup/login, admin dashboard, test creation, MCQs, timer, student results, manual score correction, Excel question import and Excel results export.
 
-## 1) Set up the free database and login
-1. Create a free project at https://supabase.com (choose a database password and keep it safe).
-2. Open **SQL Editor** in your project.
-3. Paste all contents of `supabase_setup.sql` and run.
-4. Go to **Project Settings → API**. Copy Project URL and the **anon/public** key.
-5. Open `app.js`; replace:
-   - `YOUR_SUPABASE_PROJECT_URL`
-   - `YOUR_SUPABASE_ANON_KEY`
-   with your project URL and anon/public key.
-   Do NOT put a service-role/secret key in frontend files.
-6. Publish files and open website. Create your student account.
-7. To assign admin: Supabase **Authentication → Users**, copy your account UUID. In SQL Editor run:
-   `update public.profiles set role='admin' where id='YOUR-UUID';`
-   Log out and log back in. Admin access is database role controlled; never expose service role key.
-8. Admin dashboard: create a test → add its questions → publish. Students can now take it.
+## Setup
+1. Create a Supabase project.
+2. Run `supabase_setup.sql` in SQL Editor.
+3. Get Project URL and Publishable key from Project Settings > API Keys.
+4. Replace `YOUR_SUPABASE_PROJECT_URL` and `YOUR_SUPABASE_PUBLISHABLE_KEY` in `app.js`. Never use the secret key in browser code.
+5. Deploy the folder to GitHub and Netlify. Publish directory is `.` and build command is blank.
+6. Register your account, copy its UUID from Authentication > Users, then run `update public.profiles set role='admin' where id='YOUR-UUID';` in SQL Editor. Log out and log in again.
 
-## 2) Deploy with GitHub + Netlify
-### GitHub
-1. Create a repository (e.g. `conduction-test-portal`).
-2. Upload `index.html`, `style.css`, `app.js`, `supabase_setup.sql`, `README.md` to repository root.
-3. Commit changes. GitHub repository is your source code.
+## Excel question template columns
+`Question`, `Option A`, `Option B`, `Option C`, `Option D`, `Correct Option` (A/B/C/D), `Marks`. Admin selects the destination test and imports the Excel file.
 
-### Netlify (recommended for live website)
-1. Sign in at https://app.netlify.com and choose **Add new site → Import an existing project**.
-2. Connect GitHub and select your repository.
-3. Build settings: **Build command: blank**; **Publish directory: `.`**.
-4. Click Deploy. Netlify gives a `*.netlify.app` URL.
-5. Each push to GitHub will trigger a redeploy automatically.
+## Manual scores and result export
+Admin dashboard > All student results > Edit score. Enter a whole number between 0 and maximum marks. Admin dashboard > Excel tools > select a test or All tests > Download results Excel.
 
-### GitHub Pages alternative
-Repository → **Settings → Pages** → Deploy from branch → select `main` and `/ (root)` → Save. It publishes static frontend. GitHub Pages and Netlify do not host the Supabase database; Supabase provides the database/auth service.
+## If database was already created with older SQL
+Run this additional policy in Supabase SQL Editor to enable admin score corrections:
+`create policy "admin updates results" on public.results for update using (public.is_admin()) with check (public.is_admin());`
 
-## Important security note
-This is a learning/demo MCQ test system. The answer keys are retrieved by the browser and scoring occurs client-side; a technically skilled student can inspect answers. Do not use for high-stakes exams. For secure exams, store answer keys separately and grade with a server-side function. Set Supabase email-confirmation and password policies appropriately.
+Security note: this is a learning/demo MCQ platform. Correct answers are delivered to browser and scored client-side. Do not use for high-stakes exams without moving answer keys and grading to a trusted server-side function.
